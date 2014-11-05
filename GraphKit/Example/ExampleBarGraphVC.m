@@ -29,11 +29,14 @@
     self.data = @[@65, @10, @40, @90, @50, @75];
     self.labels = @[@"US", @"UK", @"DE", @"PL", @"CN", @"JP"];
     
-//    self.graphView.barWidth = 22;
-//    self.graphView.barHeight = 140;
+//    self.graphView.barWidth = 140;
+//    self.graphView.barHeight = 22;
 //    self.graphView.marginBar = 25;
 //    self.graphView.animationDuration = 2.0;
-    
+//    self.graphView.labelWidth = self.graphView.frame.size.width/2.5;
+//    self.graphView.labelAlignment = NSTextAlignmentRight;
+//    self.graphView.horizontal = YES;
+  
     self.graphView.dataSource = self;
     
     [self.graphView draw];
@@ -58,6 +61,13 @@
     [self.graphView reset];
 }
 
+- (IBAction)onButtonHorizontal:(id)sender {
+  self.graphView.horizontal = !self.graphView.horizontal;
+  CGFloat barWidth = self.graphView.barWidth;
+  self.graphView.barWidth = self.graphView.barHeight;
+  self.graphView.barHeight = barWidth;
+  [self.graphView draw];
+}
 
 #pragma mark - GKBarGraphDataSource
 

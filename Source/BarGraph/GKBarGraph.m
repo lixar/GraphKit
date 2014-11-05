@@ -62,6 +62,11 @@ static CGFloat kDefaultAnimationDuration = 2.0;
     self.barHeight = kDefaultBarHeight;
     self.barWidth = kDefaultBarWidth;
     self.marginBar = kDefaultBarMargin;
+    self.labelHeight = kDefaultLabelHeight;
+    self.labelWidth = kDefaultLabelWidth;
+    self.labelFont = [UIFont boldSystemFontOfSize:13];
+    self.labelAlignment = NSTextAlignmentCenter;
+    self.labelColor = [UIColor lightGrayColor]; 
 }
 
 - (void)setAnimated:(BOOL)animated {
@@ -91,7 +96,7 @@ static CGFloat kDefaultAnimationDuration = 2.0;
 }
 
 - (void)_construct {
-    NSAssert(self.dataSource, @"GKBarGraph : No data source is assgined.");
+    NSAssert(self.dataSource, @"GKBarGraph : No data source is assigned.");
     
     if ([self _hasBars]) [self _removeBars];
     if ([self _hasLabels]) [self _removeLabels];
@@ -112,6 +117,7 @@ static CGFloat kDefaultAnimationDuration = 2.0;
     id items = [NSMutableArray arrayWithCapacity:count];
     for (NSInteger idx = 0; idx < count; idx++) {
         GKBar *item = [GKBar create];
+        item.horizontal = self.horizontal;
         if ([self barColor]) item.foregroundColor = [self barColor];
         [items addObject:item];
     }
@@ -125,32 +131,47 @@ static CGFloat kDefaultAnimationDuration = 2.0;
 }
 
 - (void)_positionBars {
-    CGFloat y = [self _barStartY];
-    
+  
+    __block CGFloat y = [self _barStartY];
     __block CGFloat x = [self _barStartX];
     [self.bars mk_each:^(GKBar *item) {
         item.frame = CGRectMake(x, y, _barWidth, _barHeight);
         [self addSubview:item];
-        x += [self _barSpace];
+        !self.horizontal ? (x += [self _barSpace]) : (y -= [self _barSpace]);
     }];
 }
 
 - (CGFloat)_barStartX {
-    CGFloat result = self.width;
-    CGFloat item = [self _barSpace];
-    NSInteger count = [self.dataSource numberOfBars];
+    CGFloat result = 0;
+  
+    if(!self.horizontal) {
+        result = self.width;
+        CGFloat item = [self _barSpace];
+        NSInteger count = [self.dataSource numberOfBars];
     
-    result = result - (item * count) + self.marginBar;
-    result = (result / 2);
+        result = result - (item * count) + self.marginBar;
+        result = (result / 2);
+    }
+  
     return result;
 }
 
 - (CGFloat)_barSpace {
-    return (self.barWidth + self.marginBar);
+    return ((self.horizontal ? self.barHeight : self.barWidth) + self.marginBar);
 }
 
 - (CGFloat)_barStartY {
-    return (self.height - self.barHeight);
+    CGFloat result = self.height - self.barHeight;
+  
+    if(self.horizontal) {
+        CGFloat item = [self _barSpace];
+        NSInteger count = [self.dataSource numberOfBars];
+      
+        result = result + (item * count);
+        result = (result / 2) - self.marginBar;
+    }
+  
+    return result;
 }
 
 - (BOOL)_hasLabels {
@@ -163,11 +184,11 @@ static CGFloat kDefaultAnimationDuration = 2.0;
     id items = [NSMutableArray arrayWithCapacity:count];
     for (NSInteger idx = 0; idx < count; idx++) {
         
-        CGRect frame = CGRectMake(0, 0, kDefaultLabelWidth, kDefaultLabelHeight);
+        CGRect frame = CGRectMake(0, 0, self.labelWidth, self.labelHeight);
         UILabel *item = [[UILabel alloc] initWithFrame:frame];
-        item.textAlignment = NSTextAlignmentCenter;
-        item.font = [UIFont boldSystemFontOfSize:13];
-        item.textColor = [UIColor lightGrayColor];
+        item.textAlignment = self.labelAlignment;
+        item.font = self.labelFont;
+        item.textColor = self.labelColor;
         item.text = [self.dataSource titleForBarAtIndex:idx];
         
         [items addObject:item];
@@ -186,18 +207,18 @@ static CGFloat kDefaultAnimationDuration = 2.0;
     __block NSInteger idx = 0;
     [self.bars mk_each:^(GKBar *bar) {
         
-        CGFloat labelWidth = kDefaultLabelWidth;
-        CGFloat labelHeight = kDefaultLabelHeight;
-        CGFloat startX = bar.x - ((labelWidth - self.barWidth) / 2);
-        CGFloat startY = (self.height - labelHeight);
-        
+        CGFloat labelWidth = self.labelWidth;
+        CGFloat labelHeight = self.labelHeight;
+        CGFloat startX = self.horizontal ? 0 : bar.x - ((labelWidth - self.barWidth) / 2);
+        CGFloat startY = self.horizontal ? bar.y - ((labelHeight - self.barHeight) / 2) : (self.height - labelHeight);
+      
         UILabel *label = [self.labels objectAtIndex:idx];
         label.x = startX;
         label.y = startY;
         
         [self addSubview:label];
         
-        bar.y -= labelHeight + 5;
+        !self.horizontal ? (bar.y -= labelHeight + 5) : (bar.x += labelWidth + 5);
         idx++;
     }];
 }
