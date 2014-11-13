@@ -35,13 +35,24 @@
 @property (nonatomic, weak) IBOutlet id<GKLineGraphDataSource> dataSource;
 
 @property (nonatomic, assign) CGFloat lineWidth;
+@property (nonatomic, assign) CGFloat pointWidth;
 @property (nonatomic, assign) CGFloat margin;
 
-@property (nonatomic, assign) NSInteger valueLabelCount;
-//@property (nonatomic, strong) NSNumber *maxValue;
+@property (nonatomic, assign) NSInteger verticalLabelsCount;
+@property (nonatomic, assign) NSInteger gridSections;
 
-@property (nonatomic, assign) CGFloat *minValue;
+@property (nonatomic, assign) CGFloat maxVerticalValue;
+@property (nonatomic, assign) CGFloat minVerticalValue;
+@property (nonatomic, assign) CGFloat maxHorizontalValue;
+@property (nonatomic, assign) CGFloat minHorizontalValue;
 @property (nonatomic, assign) BOOL startFromZero;
+@property (nonatomic, assign) BOOL showGraphPoints;
+@property (nonatomic, assign) BOOL showGraphLines;
+@property (nonatomic, assign) BOOL showGridLines;
+
+@property (nonatomic, strong) UIColor *gridColor;
+@property (nonatomic, strong) UIFont *labelFont;
+@property (nonatomic, strong) UIColor *labelColor;
 
 - (void)draw;
 - (void)reset;
@@ -50,7 +61,8 @@
 
 @protocol GKLineGraphDataSource <NSObject>
 
-- (NSInteger)numberOfLines;
+- (NSInteger)numberOfDataLines;
+- (NSInteger)numberOfHorizontalLabels;
 - (UIColor *)colorForLineAtIndex:(NSInteger)index;
 - (NSArray *)valuesForLineAtIndex:(NSInteger)index;
 
@@ -58,5 +70,8 @@
 - (CFTimeInterval)animationDurationForLineAtIndex:(NSInteger)index;
 
 - (NSString *)titleForLineAtIndex:(NSInteger)index;
+- (NSArray *)patternForLineAtIndex:(NSInteger)index;
+- (BOOL)showPointsForLineAtIndex:(NSInteger)index;
+- (NSArray *)valuesForLabels;
 
 @end

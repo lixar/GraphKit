@@ -39,13 +39,22 @@
 //                  @[@620, @650, @580, @620, @540, @400, @0]
                   ];
     
-    self.labels = @[@"2001", @"2002", @"2003", @"2004", @"2005", @"2006", @"2007"];
-    
+    self.labels = @[@"2001", @"2002", @"2003", @"2004", @"2005", @"2006"];
+    self.labelData = @[@2001, @2002, @2003, @2004, @2005, @2006, @2007];
     self.graph.dataSource = self;
     self.graph.lineWidth = 3.0;
     
-    self.graph.valueLabelCount = 6;
     
+    //self.graph.maxVerticalValue = 100;
+    //self.graph.minVerticalValue = 0;
+    //self.graph.minHorizontalValue = 2001;
+    //self.graph.maxHorizontalValue = 2007;
+    self.graph.margin = 0;
+    self.graph.lineWidth = 1.5;
+    self.graph.pointWidth = 1.5;
+    self.graph.gridSections = 10;
+  
+    self.graph.verticalLabelsCount = 3;
     [self.graph draw];
 }
 
@@ -65,14 +74,14 @@
 //                  @[@1, @1, @1, @1, @1, @1, @1]
 //                  ];
     
-    self.labels = @[@"2001", @"2002", @"2003", @"2004", @"2005", @"2006", @"2007"];
+    self.labels = @[@"2001", @"2002", @"2003", @"2004", @"2005", @"2006"];
     
     self.graph.dataSource = self;
     self.graph.lineWidth = 3.0;
     
 //    self.graph.startFromZero = YES;
-    self.graph.valueLabelCount = 10;
-    
+    self.graph.verticalLabelsCount = 10;
+  
     [self.graph draw];
 }
 
@@ -88,7 +97,7 @@
     self.graph.lineWidth = 3.0;
     
     //    self.graph.startFromZero = YES;
-    self.graph.valueLabelCount = 10;
+    self.graph.verticalLabelsCount = 10;
     
     [self.graph draw];
 }
@@ -112,8 +121,12 @@
 
 #pragma mark - GKLineGraphDataSource
 
-- (NSInteger)numberOfLines {
+- (NSInteger)numberOfDataLines {
     return [self.data count];
+}
+
+- (NSInteger)numberOfHorizontalLabels {
+    return [self.labels count];
 }
 
 - (UIColor *)colorForLineAtIndex:(NSInteger)index {
@@ -136,5 +149,17 @@
 - (NSString *)titleForLineAtIndex:(NSInteger)index {
     return [self.labels objectAtIndex:index];
 }
+
+//- (NSArray *)patternForLineAtIndex:(NSInteger)index; {
+//    return [@[@[@6,@6], @[], @[], @[]] objectAtIndex:index];
+//}
+
+//- (BOOL)showPointsForLineAtIndex:(NSInteger)index {
+//    return [[@[@NO, @YES, @YES, @NO] objectAtIndex:index] boolValue];
+//}
+
+//- (NSArray *)valuesForLabels {
+//    return self.labelData;
+//}
 
 @end
