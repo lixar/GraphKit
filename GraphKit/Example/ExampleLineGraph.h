@@ -16,6 +16,7 @@
 
 @property (nonatomic, strong) NSArray *data;
 @property (nonatomic, strong) NSArray *labels;
+@property (nonatomic, strong) NSArray *labelData;
 
 - (IBAction)onButtonDraw:(id)sender;
 - (IBAction)onButtonReset:(id)sender;
