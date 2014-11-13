@@ -38,6 +38,8 @@
 @property (nonatomic, assign) CGFloat cornerRadius;
 @property (nonatomic, strong) UIColor *foregroundColor;
 
+@property (nonatomic, assign) BOOL horizontal;
+
 - (void)setPercentage:(CGFloat)percentage animated:(BOOL)animated;
 
 - (void)reset;
