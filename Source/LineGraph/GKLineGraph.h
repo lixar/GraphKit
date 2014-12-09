@@ -25,23 +25,62 @@
 
 #import <UIKit/UIKit.h>
 
+//Line Attributes
+extern NSString *const GKLALineColor;
+extern NSString *const GKLAShowPoints;
+extern NSString *const GKLAShowLines;
+extern NSString *const GKLAAnimationDuration;
+extern NSString *const GKLALineWidth;
+extern NSString *const GKLAPointWidth;
+extern NSString *const GKLAPattern;
+
+struct GKRange {
+    CGFloat min;
+    CGFloat max;
+};
+typedef struct GKRange GKRange;
+
+struct GKConstraint {
+    GKRange vertical;
+    GKRange horizontal;
+};
+typedef struct GKConstraint GKConstraint;
+
+CG_INLINE GKConstraint
+GKConstraintMake(CGFloat verticalMin, CGFloat verticalMax, CGFloat horizontalMin, CGFloat horizontalMax)
+{
+  GKConstraint constraint;
+  constraint.vertical.min = verticalMin;
+  constraint.vertical.max = verticalMax;
+  constraint.horizontal.min = horizontalMin;
+  constraint.horizontal.max = horizontalMax;
+  return constraint;
+}
+
 @protocol GKLineGraphDataSource;
 
 @interface GKLineGraph : UIView
 
-@property (nonatomic, assign) BOOL animated;
-@property (nonatomic, assign) CFTimeInterval animationDuration;
-
 @property (nonatomic, weak) IBOutlet id<GKLineGraphDataSource> dataSource;
+@property (nonatomic, assign) GKConstraint graphConstraints;
 
 @property (nonatomic, assign) CGFloat lineWidth;
+@property (nonatomic, assign) CGFloat pointWidth;
 @property (nonatomic, assign) CGFloat margin;
 
-@property (nonatomic, assign) NSInteger valueLabelCount;
-//@property (nonatomic, strong) NSNumber *maxValue;
+@property (nonatomic, assign) NSInteger verticalLabelsCount;
+@property (nonatomic, assign) NSInteger horizontalLabelsCount;
+@property (nonatomic, assign) NSInteger gridSections;
 
-@property (nonatomic, assign) CGFloat *minValue;
+@property (nonatomic, strong) UIColor *gridColor;
+@property (nonatomic, strong) UIColor *labelColor;
+
+@property (nonatomic, strong) UIFont *labelFont;
+
 @property (nonatomic, assign) BOOL startFromZero;
+@property (nonatomic, assign) BOOL showGraphPoints;
+@property (nonatomic, assign) BOOL showGraphLines;
+@property (nonatomic, assign) BOOL showGridLines;
 
 - (void)draw;
 - (void)reset;
@@ -50,13 +89,13 @@
 
 @protocol GKLineGraphDataSource <NSObject>
 
-- (NSInteger)numberOfLines;
-- (UIColor *)colorForLineAtIndex:(NSInteger)index;
-- (NSArray *)valuesForLineAtIndex:(NSInteger)index;
+- (NSArray*)verticalValuesForLineAtIndex:(NSInteger)index;
+- (NSInteger)numberOfGraphLines;
 
 @optional
-- (CFTimeInterval)animationDurationForLineAtIndex:(NSInteger)index;
 
-- (NSString *)titleForLineAtIndex:(NSInteger)index;
+- (NSArray*)horizontalValuesForLineAtIndex:(NSInteger)index;
+- (NSArray*)labelsForData;
+- (NSDictionary *)lineAttributesForLineAtIndex:(NSInteger)index;
 
 @end

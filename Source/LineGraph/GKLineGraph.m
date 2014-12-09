@@ -28,15 +28,24 @@
 #import <FrameAccessor/FrameAccessor.h>
 #import <MKFoundationKit/NSArray+MK.h>
 
+NSString *const GKLAData = @"Data";
+NSString *const GKLALineColor = @"LineColor";
+NSString *const GKLAShowPoints = @"ShowPoints";
+NSString *const GKLAShowLines = @"ShowLines";
+NSString *const GKLAAnimationDuration = @"AnimationDuration";
+NSString *const GKLALineWidth = @"LineWidth";
+NSString *const GKLAPointWidth = @"PointWidth";
+NSString *const GKLAPattern = @"Pattern";
+
 static CGFloat kDefaultLabelWidth = 40.0;
-static CGFloat kDefaultLabelHeight = 12.0;
+static CGFloat kDefaultLabelHeight = 25.0;
 static NSInteger kDefaultValueLabelCount = 5;
 
 static CGFloat kDefaultLineWidth = 3.0;
+static CGFloat kDefaultPointWidth = 1.5;
 static CGFloat kDefaultMargin = 10.0;
-static CGFloat kDefaultMarginBottom = 20.0;
 
-static CGFloat kAxisMargin = 50.0;
+static CGFloat kXAxisMargin = 5.0;
 
 @interface GKLineGraph ()
 
@@ -64,11 +73,18 @@ static CGFloat kAxisMargin = 50.0;
 }
 
 - (void)_init {
-    self.animated = YES;
-    self.animationDuration = 1;
     self.lineWidth = kDefaultLineWidth;
+    self.pointWidth = kDefaultPointWidth;
     self.margin = kDefaultMargin;
-    self.valueLabelCount = kDefaultValueLabelCount;
+    self.verticalLabelsCount = kDefaultValueLabelCount;
+    self.gridSections = kDefaultValueLabelCount;
+    self.gridColor = [[UIColor alloc] initWithRed:0.8 green:0.8 blue:0.8 alpha:0.5];
+    self.labelFont = [UIFont systemFontOfSize:13];
+    self.labelColor = [UIColor blackColor];
+    self.showGraphPoints = YES;
+    self.showGraphLines = YES;
+    self.showGridLines = YES;
+    self.graphConstraints = GKConstraintMake(NAN, NAN, NAN, NAN);
     self.clipsToBounds = YES;
 }
 
@@ -81,8 +97,9 @@ static CGFloat kAxisMargin = 50.0;
 
     if ([self _hasValueLabels]) [self _removeValueLabels];
     [self _constructValueLabels];
-    
-    [self _drawLines];
+  
+    [self _drawGridLines];
+    [self _drawData];
 }
 
 - (BOOL)_hasTitleLabels {
@@ -94,18 +111,20 @@ static CGFloat kAxisMargin = 50.0;
 }
 
 - (void)_constructTitleLabels {
-    
-    NSInteger count = [[self.dataSource valuesForLineAtIndex:0] count];
+  
+    NSInteger count = [self.dataSource labelsForData].count;
+  
     id items = [NSMutableArray arrayWithCapacity:count];
     for (NSInteger idx = 0; idx < count; idx++) {
-        
-        CGRect frame = CGRectMake(0, 0, kDefaultLabelWidth, kDefaultLabelHeight);
+      
+        CGRect frame = CGRectMake(0, 0, [self _horizontalLabelWidth], kDefaultLabelHeight);
         UILabel *item = [[UILabel alloc] initWithFrame:frame];
         item.textAlignment = NSTextAlignmentCenter;
-        item.font = [UIFont boldSystemFontOfSize:12];
-        item.textColor = [UIColor lightGrayColor];
-        item.text = [self.dataSource titleForLineAtIndex:idx];
-        
+        item.font = self.labelFont;
+        item.textColor = self.labelColor;
+      
+        item.text = [self.dataSource labelsForData][idx];
+
         [items addObject:item];
     }
     self.titleLabels = items;
@@ -119,14 +138,12 @@ static CGFloat kAxisMargin = 50.0;
 }
 
 - (void)_positionTitleLabels {
-    
-    __block NSInteger idx = 0;
-    id values = [self.dataSource valuesForLineAtIndex:0];
-    [values mk_each:^(id value) {
-        
-        CGFloat labelWidth = kDefaultLabelWidth;
+  
+    NSInteger count = self.horizontalLabelsCount;
+    for (NSInteger idx = 0; idx < count; idx++) {
+      
         CGFloat labelHeight = kDefaultLabelHeight;
-        CGFloat startX = [self _pointXForIndex:idx] - (labelWidth / 2);
+        CGFloat startX = [self _horizontalLabelStartXForIndex:idx];
         CGFloat startY = (self.height - labelHeight);
         
         UILabel *label = [self.titleLabels objectAtIndex:idx];
@@ -134,24 +151,33 @@ static CGFloat kAxisMargin = 50.0;
         label.y = startY;
         
         [self addSubview:label];
-
-        idx++;
-    }];
+    };
 }
 
-- (CGFloat)_pointXForIndex:(NSInteger)index {
-    return kAxisMargin + self.margin + (index * [self _stepX]);
+- (CGFloat)_horizontalLabelWidth {
+    return [self _graphWidth] / self.horizontalLabelsCount;
 }
 
-- (CGFloat)_stepX {
-    id values = [self.dataSource valuesForLineAtIndex:0];
-    CGFloat result = ([self _plotWidth] / [values count]);
+- (CGFloat)_horizontalLabelStartXForIndex:(NSInteger)index {
+    return [self _graphLeftMargin] + index * [self _horizontalLabelWidth];
+}
+
+- (CGFloat)_linePointXForIndex:(NSInteger)dataIndex lineIndex:(NSInteger)lineIndex totalDataPoints:(NSInteger)totalDataPoints {
+    BOOL horizontalData = [self _hasHorizontalDataForIndex:lineIndex];
+    CGFloat maxVal = horizontalData ? [self _maxHorizontalValue] : totalDataPoints;
+    CGFloat minVal = horizontalData ? [self _minHorizontalValue] : 0;
+    CGFloat value = horizontalData ? [[self.dataSource horizontalValuesForLineAtIndex:lineIndex][dataIndex] floatValue] : dataIndex;
+    CGFloat scale = (value - minVal);
+    scale /= horizontalData ? (maxVal - minVal) : totalDataPoints-1;
+    CGFloat result = [self _graphWidth] * scale;
+    result += [self _graphLeftMargin];
+  
     return result;
 }
 
 - (void)_constructValueLabels {
     
-    NSInteger count = self.valueLabelCount;
+    NSInteger count = self.verticalLabelsCount;
     id items = [NSMutableArray arrayWithCapacity:count];
     
     for (NSInteger idx = 0; idx < count; idx++) {
@@ -159,12 +185,12 @@ static CGFloat kAxisMargin = 50.0;
         CGRect frame = CGRectMake(0, 0, kDefaultLabelWidth, kDefaultLabelHeight);
         UILabel *item = [[UILabel alloc] initWithFrame:frame];
         item.textAlignment = NSTextAlignmentRight;
-        item.font = [UIFont boldSystemFontOfSize:12];
-        item.textColor = [UIColor lightGrayColor];
+        item.font = self.labelFont;
+        item.textColor = self.labelColor;
     
-        CGFloat value = [self _minValue] + (idx * [self _stepValueLabelY]);
+        CGFloat value = [self _minVerticalValue] + (idx * [self _stepValueLabelY]);
         item.centerY = [self _positionYForLineValue:value];
-        
+
         item.text = [@(ceil(value)) stringValue];
 //        item.text = [@(value) stringValue];
         
@@ -175,28 +201,61 @@ static CGFloat kAxisMargin = 50.0;
 }
 
 - (CGFloat)_stepValueLabelY {
-    return (([self _maxValue] - [self _minValue]) / (self.valueLabelCount - 1));
+    return (([self _maxVerticalValue] - [self _minVerticalValue]) / (self.verticalLabelsCount - 1));
 }
 
-- (CGFloat)_maxValue {
-    id values = [self _allValues];
+- (CGFloat)_maxVerticalValue {
+    CGFloat verticalMax = self.graphConstraints.vertical.max;
+    if (!isnan(verticalMax)) return verticalMax;
+    id values = [self _allVerticalValues];
     return [[values mk_max] floatValue];
 }
 
-- (CGFloat)_minValue {
+- (CGFloat)_minVerticalValue {
+    CGFloat verticalMin = self.graphConstraints.vertical.min;
     if (self.startFromZero) return 0;
-    id values = [self _allValues];
+    else if (!isnan(verticalMin)) return verticalMin;
+    id values = [self _allVerticalValues];
     return [[values mk_min] floatValue];
 }
 
-- (NSArray *)_allValues {
-    NSInteger count = [self.dataSource numberOfLines];
+- (NSArray *)_allVerticalValues {
+    NSInteger count = [self.dataSource numberOfGraphLines];
     id values = [NSMutableArray array];
     for (NSInteger idx = 0; idx < count; idx++) {
-        id item = [self.dataSource valuesForLineAtIndex:idx];
+        id item = [self.dataSource verticalValuesForLineAtIndex:idx];
         [values addObjectsFromArray:item];
     }
     return values;
+}
+
+- (CGFloat)_maxHorizontalValue {
+    CGFloat horizontalMax = self.graphConstraints.horizontal.max;
+    if (!isnan(horizontalMax)) return horizontalMax;
+    id values = [self _allHorizontalValues];
+    return [[values mk_max] floatValue];
+}
+
+- (CGFloat)_minHorizontalValue {
+    CGFloat horizontalMin = self.graphConstraints.horizontal.min;
+    if (!isnan(horizontalMin)) return horizontalMin;
+    id values = [self _allHorizontalValues];
+    return [[values mk_min] floatValue];
+    return 0;
+}
+
+- (NSArray *)_allHorizontalValues {
+    NSInteger count = [self.dataSource numberOfGraphLines];
+    id values = [NSMutableArray array];
+    for (NSInteger idx = 0; idx < count; idx++) {
+    id item = [self.dataSource horizontalValuesForLineAtIndex:idx];
+    if(item != nil) [values addObjectsFromArray:item];
+  }
+  return values;
+}
+
+- (BOOL)_hasHorizontalDataForIndex:(NSInteger)index {
+  return [self.dataSource horizontalValuesForLineAtIndex:index] != nil;
 }
 
 - (void)_removeValueLabels {
@@ -206,68 +265,136 @@ static CGFloat kAxisMargin = 50.0;
     self.valueLabels = nil;
 }
 
-- (CGFloat)_plotWidth {
-    return (self.width - (2 * self.margin) - kAxisMargin);
+- (CGFloat)_graphHeight {
+    return (self.height - kDefaultLabelHeight - [self _graphTopMargin]);
 }
 
-- (CGFloat)_plotHeight {
-    return (self.height - (2 * kDefaultLabelHeight + kDefaultMarginBottom));
+- (CGFloat)_graphWidth {
+    return self.frame.size.width - [self _graphLeftMargin]*1.5 - self.margin*2;
 }
 
-- (void)_drawLines {
-    for (NSInteger idx = 0; idx < [self.dataSource numberOfLines]; idx++) {
-        [self _drawLineAtIndex:idx];
+- (CGFloat)_graphTopMargin {
+    return kDefaultLabelHeight/2;
+}
+
+- (CGFloat)_graphLeftMargin {
+    return kXAxisMargin + kDefaultLabelWidth + self.margin;
+}
+
+- (void)_drawData {
+    for (NSInteger idx = 0; idx < [self.dataSource numberOfGraphLines]; idx++) {
+        [self _drawDataAtIndex:idx];
     }
 }
 
-- (void)_drawLineAtIndex:(NSInteger)index {
+- (void)_drawDataAtIndex:(NSInteger)lineIndex {
     
     // http://stackoverflow.com/questions/19599266/invalid-context-0x0-under-ios-7-0-and-system-degradation
     UIGraphicsBeginImageContext(self.frame.size);
-    
-    UIBezierPath *path = [self _bezierPathWith:0];
-    CAShapeLayer *layer = [self _layerWithPath:path];
-    
-    layer.strokeColor = [[self.dataSource colorForLineAtIndex:index] CGColor];
-    
-    [self.layer addSublayer:layer];
-    
-    NSInteger idx = 0;
-    id values = [self.dataSource valuesForLineAtIndex:index];
+  
+    UIBezierPath *path;
+    CAShapeLayer *layer;
+  
+    BOOL showGraphPoints = self.showGraphPoints;
+    if ([self.dataSource respondsToSelector:@selector(lineAttributesForLineAtIndex:)]) {
+        NSDictionary *options = [self.dataSource lineAttributesForLineAtIndex:lineIndex];
+        if([options valueForKey:GKLAShowPoints])showGraphPoints = ((NSNumber *)[options valueForKey:GKLAShowPoints]).boolValue;
+    }
+  
+    if(self.showGraphLines) {
+        path = [self _bezierPath];
+        layer = [self _lineLayer];
+        layer.strokeColor = ((UIColor *)[[self.dataSource lineAttributesForLineAtIndex:lineIndex] objectForKey:GKLALineColor]).CGColor;
+        if ([self.dataSource respondsToSelector:@selector(lineAttributesForLineAtIndex:)]) {
+            NSDictionary *options = [self.dataSource lineAttributesForLineAtIndex:lineIndex];
+            if([options valueForKey:GKLAPattern]) [layer setLineDashPattern:[options valueForKey:GKLAPattern]];
+        }
+        [self.layer addSublayer:layer];
+    }
+  
+    NSInteger dataIndex = 0;
+    NSArray *values = [self.dataSource verticalValuesForLineAtIndex:lineIndex];
     for (id item in values) {
 
-        CGFloat x = [self _pointXForIndex:idx];
+        CGFloat x = [self _linePointXForIndex:dataIndex lineIndex:lineIndex totalDataPoints:values.count];
         CGFloat y = [self _positionYForLineValue:[item floatValue]];
         CGPoint point = CGPointMake(x, y);
-        
-        if (idx != 0) [path addLineToPoint:point];
-        [path moveToPoint:point];
-        
-        idx++;
+      
+        if(self.showGraphLines) {
+            if (dataIndex != 0) [path addLineToPoint:point];
+            [path moveToPoint:point];
+        }
+      
+        BOOL atStartOfGraph = (x == [self _graphLeftMargin]);
+        BOOL atEndOfGraph = (x == self.frame.size.width - [self _graphLeftMargin]/2);
+        if(showGraphPoints && !atStartOfGraph && !atEndOfGraph) {
+            [self _drawPointAtPosition:point
+                         withLineIndex:lineIndex
+                         withDataIndex:dataIndex];
+        }
+      
+        dataIndex++;
     }
     
     layer.path = path.CGPath;
     
-    if (self.animated) {
+    if (self.showGraphLines) {
         CABasicAnimation *animation = [self _animationWithKeyPath:@"strokeEnd"];
-        if ([self.dataSource respondsToSelector:@selector(animationDurationForLineAtIndex:)]) {
-            animation.duration = [self.dataSource animationDurationForLineAtIndex:index];
+        if ([self.dataSource respondsToSelector:@selector(lineAttributesForLineAtIndex:)]) {
+            NSDictionary *options = [self.dataSource lineAttributesForLineAtIndex:lineIndex];
+            if([options objectForKey:GKLAAnimationDuration])animation.duration = ((NSNumber*)[options objectForKey:GKLAAnimationDuration]).floatValue;
         }
         [layer addAnimation:animation forKey:@"strokeEndAnimation"];
     }
-    
+  
     UIGraphicsEndImageContext();
 }
 
+- (void)_drawPointAtPosition:(CGPoint)point
+               withLineIndex:(NSInteger)lineIndex
+               withDataIndex:(NSInteger)dataIndex {
+  
+    UIColor *color = [[self.dataSource lineAttributesForLineAtIndex:lineIndex] objectForKey:GKLALineColor];
+    CAShapeLayer *circle = [self _pointLayerWithColor:color];
+    circle.position = CGPointMake(point.x - self.pointWidth, point.y - self.pointWidth);
+  
+    [self.layer addSublayer:circle];
+    NSInteger totalDataPoints = [self.dataSource verticalValuesForLineAtIndex:lineIndex].count;
+  
+    CABasicAnimation *animation = [self _animationWithKeyPath:@"opacity"];
+    if ([self.dataSource respondsToSelector:@selector(lineAttributesForLineAtIndex:)]) {
+        NSDictionary *options = [self.dataSource lineAttributesForLineAtIndex:lineIndex];
+        if([options objectForKey:GKLAAnimationDuration])animation.duration = ((NSNumber*)[options objectForKey:GKLAAnimationDuration]).floatValue;
+    }
+
+    animation.beginTime = CACurrentMediaTime() + (animation.duration / (totalDataPoints-1)) * dataIndex;
+
+    animation.duration = 0.1;
+    animation.fillMode = kCAFillModeBackwards;
+    [circle addAnimation:animation forKey:@"opacityIN"];
+}
+
+- (CAShapeLayer *)_pointLayerWithColor:(UIColor *)color {
+    CAShapeLayer *circle = [CAShapeLayer layer];
+    circle.lineWidth = self.pointWidth;
+    
+    circle.path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, self.pointWidth*2, self.pointWidth*2)
+                                             cornerRadius:self.pointWidth].CGPath;
+    circle.fillColor = color.CGColor;
+    circle.strokeColor = color.CGColor;
+    
+    return circle;
+}
+
 - (CGFloat)_positionYForLineValue:(CGFloat)value {
-    CGFloat scale = (value - [self _minValue]) / ([self _maxValue] - [self _minValue]);
-    CGFloat result = [self _plotHeight] * scale;
-    result = ([self _plotHeight] -  result);
-    result += kDefaultLabelHeight;
+    CGFloat scale = (value - [self _minVerticalValue]) / ([self _maxVerticalValue] - [self _minVerticalValue]);
+    CGFloat result = [self _graphHeight] * scale;
+    result = ([self _graphHeight] -  result);
+    result += [self _graphTopMargin];
     return result;
 }
 
-- (UIBezierPath *)_bezierPathWith:(CGFloat)value {
+- (UIBezierPath *)_bezierPath {
     UIBezierPath *path = [UIBezierPath bezierPath];
     path.lineCapStyle = kCGLineCapRound;
     path.lineJoinStyle = kCGLineJoinRound;
@@ -275,7 +402,7 @@ static CGFloat kAxisMargin = 50.0;
     return path;
 }
 
-- (CAShapeLayer *)_layerWithPath:(UIBezierPath *)path {
+- (CAShapeLayer *)_lineLayer {
     CAShapeLayer *item = [CAShapeLayer layer];
     item.fillColor = [[UIColor blackColor] CGColor];
     item.lineCap = kCALineCapRound;
@@ -290,11 +417,133 @@ static CGFloat kAxisMargin = 50.0;
 - (CABasicAnimation *)_animationWithKeyPath:(NSString *)keyPath {
     CABasicAnimation *animation = [CABasicAnimation animationWithKeyPath:keyPath];
     animation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-    animation.duration = self.animationDuration;
     animation.fromValue = @(0);
     animation.toValue = @(1);
 //    animation.delegate = self;
     return animation;
+}
+
+- (void)_drawGridLines {
+    UIGraphicsBeginImageContext(self.frame.size);
+    [self _drawSolidGridOutline];
+    [self _drawHorizontalLabelMarkers];
+    if(self.showGridLines) [self _drawHorizontalGridLines];
+    UIGraphicsEndImageContext();
+}
+
+- (void)_drawSolidGridOutline {
+    [self _drawVerticalGridOutline];
+    [self _drawHorizontalGridOutline];
+}
+
+- (void)_drawVerticalGridOutline {
+    UIBezierPath *path;
+    CAShapeLayer *layer;
+    for (NSInteger idx = 0; idx < 2; idx++) {
+        path = [self _bezierPath];
+        layer = [self _lineLayer];
+        layer.strokeColor = self.gridColor.CGColor;
+        
+        [self.layer addSublayer:layer];
+        
+        CGFloat x = [self _graphLeftMargin] + ([self _graphWidth] *idx);
+        CGFloat y = [self _graphTopMargin];
+        CGPoint point = CGPointMake(x, y);
+        
+        [path addLineToPoint:point];
+        [path moveToPoint:point];
+        
+        y += [self _graphHeight];
+        point = CGPointMake(x, y);
+        
+        [path addLineToPoint:point];
+        [path moveToPoint:point];
+        layer.path = path.CGPath;
+    }
+}
+
+- (void)_drawHorizontalGridOutline {
+    UIBezierPath *path;
+    CAShapeLayer *layer;
+    for (NSInteger idx = 0; idx < 2; idx++) {
+        path = [self _bezierPath];
+        layer = [self _lineLayer];
+        layer.strokeColor = self.gridColor.CGColor;
+        
+        [self.layer addSublayer:layer];
+        
+        CGFloat x = [self _graphLeftMargin];
+        CGFloat y = [self _graphTopMargin] + ([self _graphHeight] *idx);
+        CGPoint point = CGPointMake(x, y);
+        
+        [path addLineToPoint:point];
+        [path moveToPoint:point];
+        
+        x = [self _graphWidth] + [self _graphLeftMargin];
+        point = CGPointMake(x, y);
+        
+        [path addLineToPoint:point];
+        [path moveToPoint:point];
+        layer.path = path.CGPath;
+    }
+}
+
+- (void)_drawHorizontalGridLines {
+    UIBezierPath *path;
+    CAShapeLayer *layer;
+    
+    NSInteger numberOfBars = self.gridSections;
+    for (NSInteger idx = 1; idx < numberOfBars; idx++) {
+        path = [self _bezierPath];
+        layer = [self _lineLayer];
+        layer.strokeColor = self.gridColor.CGColor;
+        [self.layer addSublayer:layer];
+        
+        [layer setLineDashPattern:@[@12,@3]];
+        
+        CGFloat x = [self _graphLeftMargin];
+        CGFloat y = [self _graphHeight];
+        y -= (([self _graphHeight] / numberOfBars) * idx) - [self _graphTopMargin];
+        CGPoint point = CGPointMake(x, y);
+        
+        [path addLineToPoint:point];
+        [path moveToPoint:point];
+        
+        x = [self _graphWidth] + [self _graphLeftMargin];
+        point = CGPointMake(x, y);
+        
+        [path addLineToPoint:point];
+        [path moveToPoint:point];
+        
+        layer.path = path.CGPath;
+    }
+}
+
+- (void)_drawHorizontalLabelMarkers {
+    UIBezierPath *path;
+    CAShapeLayer *layer;
+  
+    for (NSInteger idx = 1; idx < self.horizontalLabelsCount; idx++) {
+        path = [self _bezierPath];
+        layer = [self _lineLayer];
+        layer.strokeColor = self.gridColor.CGColor;
+        [self.layer addSublayer:layer];
+        
+        CGFloat x = [self _graphLeftMargin] + [self _horizontalLabelWidth] *idx;
+        CGFloat y = [self _graphHeight] + kDefaultLabelHeight - [self _graphTopMargin];
+        CGPoint point = CGPointMake(x, y);
+        
+        [path addLineToPoint:point];
+        [path moveToPoint:point];
+        
+        y =  [self _graphHeight] + kDefaultLabelHeight;
+        point = CGPointMake(x, y);
+        
+        [path addLineToPoint:point];
+        [path moveToPoint:point];
+        
+        layer.path = path.CGPath;
+    }
 }
 
 - (void)reset {

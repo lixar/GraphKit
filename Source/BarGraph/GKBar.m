@@ -113,11 +113,14 @@ static CFTimeInterval kDefaultAnimationDuration = 1.0;
 
 - (UIBezierPath *)_bezierPathWith:(CGFloat)value {
     UIBezierPath *path = [UIBezierPath bezierPath];
-    CGFloat startX = (self.frame.size.width / 2);
-    CGFloat startY = (self.frame.size.height * (1 - (_percentage / 100)));
-    CGFloat endY = (self.frame.size.height * (1 - value));
+    CGFloat startX = !self.horizontal ? (self.frame.size.width / 2) : 0;
+    CGFloat startY = !self.horizontal ? (self.frame.size.height * (1 - (_percentage / 100))) : (self.frame.size.height / 2);
+    CGFloat endY = !self.horizontal ? (self.frame.size.height * (1 - value)) : startY;
+    CGFloat endX = !self.horizontal ? startX : (self.frame.size.width * value);
+  
     [path moveToPoint:CGPointMake(startX, startY)];
-	[path addLineToPoint:CGPointMake(startX, endY)];
+    [path addLineToPoint:CGPointMake(endX, endY)];
+
     return path;
 }
 
@@ -125,7 +128,7 @@ static CFTimeInterval kDefaultAnimationDuration = 1.0;
     CAShapeLayer *item = [CAShapeLayer layer];
     item.fillColor = [[UIColor blackColor] CGColor];
     item.lineCap = kCALineCapButt;
-    item.lineWidth = self.frame.size.width;
+    item.lineWidth = self.horizontal ? self.frame.size.height : self.frame.size.width;
     item.path = path.CGPath;
     item.strokeColor = [self.foregroundColor CGColor];
     item.strokeEnd = 1.0;
