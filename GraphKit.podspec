@@ -1,20 +1,18 @@
-
 Pod::Spec.new do |s|
   s.name         = "GraphKit"
-  s.version      = "1.1.1"
+  s.version      = "1.1.2"
   s.summary      = "A lightweight library of animated charts for iOS."
-  s.homepage     = "https://github.com/michalkonturek/GraphKit"
+  s.homepage     = "https://github.com/lixar/GraphKit"
   s.license      = 'MIT'
 
   s.author       = { 
-    "Michal Konturek" => "michal.konturek@gmail.com" 
+    "Michal Konturek" => "michal.konturek@gmail.com"
   }
 
   s.ios.deployment_target = '7.0'
   
-  s.social_media_url = 'https://twitter.com/michalkonturek'
   s.source       = { 
-    :git => "https://github.com/michalkonturek/GraphKit.git", 
+    :git => "https://github.com/lixar/GraphKit.git", 
     :tag => s.version.to_s
   }
 
