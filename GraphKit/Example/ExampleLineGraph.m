@@ -69,6 +69,7 @@
     self.graph.lineWidth = 1.5;
     self.graph.pointWidth = 1.5;
     self.graph.gridSections = 10;
+    self.graph.gridLineWidth = 0.5;
   
     self.graph.verticalLabelsCount = 3;
     self.graph.horizontalLabelsCount = self.labels.count;
