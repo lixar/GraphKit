@@ -33,7 +33,6 @@ NSString *const GKLALineColor = @"LineColor";
 NSString *const GKLAShowPoints = @"ShowPoints";
 NSString *const GKLAShowLines = @"ShowLines";
 NSString *const GKLAAnimationDuration = @"AnimationDuration";
-NSString *const GKLALineWidth = @"LineWidth";
 NSString *const GKLAPointWidth = @"PointWidth";
 NSString *const GKLAPattern = @"Pattern";
 
@@ -77,6 +76,7 @@ static CGFloat kXAxisMargin = 5.0;
     self.pointWidth = kDefaultPointWidth;
     self.margin = kDefaultMargin;
     self.verticalLabelsCount = kDefaultValueLabelCount;
+    self.gridLineWidth = kDefaultLineWidth;
     self.gridSections = kDefaultValueLabelCount;
     self.gridColor = [[UIColor alloc] initWithRed:0.8 green:0.8 blue:0.8 alpha:0.5];
     self.labelFont = [UIFont systemFontOfSize:13];
@@ -442,6 +442,7 @@ static CGFloat kXAxisMargin = 5.0;
     for (NSInteger idx = 0; idx < 2; idx++) {
         path = [self _bezierPath];
         layer = [self _lineLayer];
+        layer.lineWidth = self.gridLineWidth;
         layer.strokeColor = self.gridColor.CGColor;
         
         [self.layer addSublayer:layer];
@@ -468,6 +469,7 @@ static CGFloat kXAxisMargin = 5.0;
     for (NSInteger idx = 0; idx < 2; idx++) {
         path = [self _bezierPath];
         layer = [self _lineLayer];
+        layer.lineWidth = self.gridLineWidth;
         layer.strokeColor = self.gridColor.CGColor;
         
         [self.layer addSublayer:layer];
@@ -496,6 +498,7 @@ static CGFloat kXAxisMargin = 5.0;
     for (NSInteger idx = 1; idx < numberOfBars; idx++) {
         path = [self _bezierPath];
         layer = [self _lineLayer];
+        layer.lineWidth = self.gridLineWidth;
         layer.strokeColor = self.gridColor.CGColor;
         [self.layer addSublayer:layer];
         
@@ -526,6 +529,7 @@ static CGFloat kXAxisMargin = 5.0;
     for (NSInteger idx = 1; idx < self.horizontalLabelsCount; idx++) {
         path = [self _bezierPath];
         layer = [self _lineLayer];
+        layer.lineWidth = self.gridLineWidth;
         layer.strokeColor = self.gridColor.CGColor;
         [self.layer addSublayer:layer];
         

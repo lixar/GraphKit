@@ -30,7 +30,6 @@ extern NSString *const GKLALineColor;
 extern NSString *const GKLAShowPoints;
 extern NSString *const GKLAShowLines;
 extern NSString *const GKLAAnimationDuration;
-extern NSString *const GKLALineWidth;
 extern NSString *const GKLAPointWidth;
 extern NSString *const GKLAPattern;
 
@@ -72,6 +71,7 @@ GKConstraintMake(CGFloat verticalMin, CGFloat verticalMax, CGFloat horizontalMin
 @property (nonatomic, assign) NSInteger horizontalLabelsCount;
 @property (nonatomic, assign) NSInteger gridSections;
 
+@property (nonatomic, assign) CGFloat gridLineWidth;
 @property (nonatomic, strong) UIColor *gridColor;
 @property (nonatomic, strong) UIColor *labelColor;
 
